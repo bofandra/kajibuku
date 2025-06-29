@@ -1,13 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
+import ThinkBlock from './components/ThinkBlock.tsx';
+
+function renderAnswer(answer: string) {
+  const parts = answer.split(/<\/?think>/g);
+  return parts.map((part, idx) =>
+    idx % 2 === 1 ? (
+      <ThinkBlock key={idx}>{part}</ThinkBlock>
+    ) : (
+      <span key={idx}>{part}</span>
+    )
+  );
+}
 
 export default function PDFChat() {
-  const [pdfs, setPdfs] = useState({});
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+    const [pdfs, setPdfs] = useState({});
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [question, setQuestion] = useState('');
+    const [answer, setAnswer] = useState('');
+    const [file, setFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const placeholder = '[[THINK_BLOCK]]';
+    const rawParts = answer.split(/<\/?think>/g);
+
+    const processed = rawParts
+    .map((part, idx) => (idx % 2 === 1 ? `${placeholder}${part}${placeholder}` : part))
+    .join('');
+
+    const blocks = processed.split(placeholder);
+
 
   const API = process.env.REACT_APP_API_BASE || '';
 
@@ -19,7 +41,7 @@ export default function PDFChat() {
     const res = await axios.get(`${API}/documents`);
     setPdfs(res.data);
   };
-  
+
   const handleFileUpload = async () => {
     if (!file) return;
     setUploading(true);
@@ -95,11 +117,14 @@ export default function PDFChat() {
         Ask
       </button>
 
-      {answer && (
-        <div className="border rounded shadow p-4 whitespace-pre-wrap mt-4">
-          {answer}
-        </div>
-      )}
+      {blocks.map((block, i) =>
+        i % 2 === 1 ? (
+            <ThinkBlock key={i}>{block}</ThinkBlock>
+        ) : (
+            <ReactMarkdown key={i}>{block}</ReactMarkdown>
+        )
+        )}
+
     </div>
   );
 }
